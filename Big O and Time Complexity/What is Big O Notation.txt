@@ -1,1 +1,0 @@
-Big O Notation is used to analyze the efficiency of an algorithm as its inputs approaches infinity. This means how drastically the size of the input grows, how drastically does the space or time requirements grow with it.
