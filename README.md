@@ -61,12 +61,4 @@ npm run dev
 
 -----
 
-## 🤝 Contributing
-
-We welcome contributions from developers, designers, and e-commerce experts. Please read our [CONTRIBUTING.md](https://www.google.com/search?q=https://github.com/saadsalmanakram/Retail-GPT/blob/main/CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
------
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=https://github.com/saadsalmanakram/Retail-GPT/blob/main/LICENSE) file for details.
+ 
