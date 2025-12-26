@@ -51,7 +51,6 @@ This is where the personalization magic happens, utilizing state-of-the-art mode
 * **Imagen 3 / Nano Banana Pro:** A state-of-the-art diffusion model used by the *Visual Agent* to create hyper-realistic, personalized product photography based on user context.
 
 
-
 ---
 
 ## 🛠️ Infrastructure & Dev Tools
@@ -108,4 +107,52 @@ npm run dev
 
 -----
 
+To wrap everything up for **saadsalmanakram/Retail-GPT**, here is the final, comprehensive directory structure. This reflects the multi-agent architecture (Stylist, Copywriter, Visual, and Merchandiser) and the MERN stack integration with Weaviate.
 
+### 📂 Final Project Structure
+
+```text
+Retail-GPT/
+├── backend/
+│   ├── src/
+│   │   ├── agents/
+│   │   │   ├── stylistAgent.ts       # Parses social data -> Style DNA
+│   │   │   ├── copywriterAgent.ts    # Personalized product descriptions
+│   │   │   └── visualAgent.ts        # Imagen 3 API logic for custom images
+│   │   ├── controllers/
+│   │   │   └── storefrontController.ts # Orchestrates the 3 agents
+│   │   ├── models/
+│   │   │   └── User.ts               # MongoDB Schema for user persistence
+│   │   ├── routes/
+│   │   │   └── api.ts                # Express routes (POST /generate-storefront)
+│   │   ├── services/
+│   │   │   ├── aiService.ts          # Gemma & Google AI SDK configuration
+│   │   │   └── vectorStore.ts        # Weaviate client & schema init
+│   │   ├── scripts/
+│   │   │   └── seedProducts.ts       # Populates Weaviate with base catalog
+│   │   └── index.ts                  # Server entry point
+│   ├── .env                          # API Keys (GEMINI, WEAVIATE, MONGO)
+│   ├── package.json
+│   └── tsconfig.json
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── layout.tsx            # Global fonts & styles
+│   │   │   └── page.tsx              # Main Input UI (Bio analysis trigger)
+│   │   ├── components/
+│   │   │   ├── StorefrontGrid.tsx    # The Visual Merchandiser logic
+│   │   │   ├── ProductCard.tsx       # Individual AI-generated item card
+│   │   │   └── Loader.tsx            # Visual feedback during generation
+│   │   ├── lib/
+│   │   │   └── api.ts                # Fetch wrappers for backend calls
+│   │   └── hooks/
+│   │       └── useStorefront.ts      # State management for generated data
+│   ├── .env.local                    # Public API URLs
+│   ├── tailwind.config.ts            # Theme config for dynamic styling
+│   └── package.json
+├── docker-compose.yml                # Weaviate & Text2Vec modules
+└── README.md                         # Project documentation
+
+```
+
+---
