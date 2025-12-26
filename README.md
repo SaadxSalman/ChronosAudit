@@ -15,12 +15,14 @@ An agent that creates a dynamic, personalized shopping experience from end to en
 
 -----
 
-## ⚙️ Tech Stack
+## 🛠️ Tech Stack
 
-  * **Frontend:** [Next.js](https://nextjs.org/)
-  * **Text Generation:** [Gemma](https://huggingface.co/google/gemma-7b)
-  * **Image Generation:** Large-scale generative model (e.g., Imagen 4)
-  * **Vector Search:** [Weaviate](https://qdrant.tech/)
+* **Frontend:** [Next.js](https://nextjs.org/) (App Router), [TypeScript](https://www.typescriptlang.org/), [Tailwind CSS](https://tailwindcss.com/)
+* **Backend:** [Node.js](https://nodejs.org/), [Express.js](https://expressjs.com/)
+* **Database:** [MongoDB](https://www.mongodb.com/) (MERN Stack)
+* **Text Generation:** [Gemma](https://huggingface.co/google/gemma-7b)
+* **Image Generation:** Large-scale generative model (e.g., Imagen 4)
+* **Vector Search:**  [Weaviate](https://weaviate.io/)
 
 -----
 
