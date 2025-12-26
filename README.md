@@ -17,12 +17,57 @@ An agent that creates a dynamic, personalized shopping experience from end to en
 
 ## 🛠️ Tech Stack
 
-* **Frontend:** [Next.js](https://nextjs.org/) (App Router), [TypeScript](https://www.typescriptlang.org/), [Tailwind CSS](https://tailwindcss.com/)
-* **Backend:** [Node.js](https://nodejs.org/), [Express.js](https://expressjs.com/)
-* **Database:** [MongoDB](https://www.mongodb.com/) (MERN Stack)
-* **Text Generation:** [Gemma](https://huggingface.co/google/gemma-7b)
-* **Image Generation:** Large-scale generative model (e.g., Imagen 4)
-* **Vector Search:**  [Weaviate](https://weaviate.io/)
+## 🏗️ Core Application Stack (MERN+)
+
+This layer handles the traditional web application logic, data persistence, and routing.
+
+* **Frontend:**
+* **Next.js (App Router):** The React framework for production-grade web apps, providing server-side rendering (SSR) for SEO and fast initial loads.
+* **TypeScript:** Ensures type safety across your agents' data structures.
+* **Tailwind CSS:** Used by the *Visual Merchandiser Agent* to dynamically style the storefront (e.g., swapping themes from "Cyberpunk" to "Minimalist").
+
+
+* **Backend:**
+* **Node.js & Express.js:** The lightweight execution environment for our AI agents.
+* **MongoDB (Mongoose):** Stores persistent user data, like saved style profiles, historical preferences, and cart items.
+
+
+
+---
+
+## 🧠 The "Brain" (AI & Vector Layer)
+
+This is where the personalization magic happens, utilizing state-of-the-art models for 2025.
+
+* **Vector Database:**
+* **Weaviate:** A cloud-native vector database that powers your *Aesthetic Vector Space*. It stores product embeddings so the Stylist Agent can find "vibes" rather than just keywords.
+
+
+* **Text Generation (LLM):**
+* **Gemma 3 Flash (via Google AI SDK):** Used by the *Stylist Agent* for fast social media analysis and the *Copywriting Agent* for generating personalized descriptions in real-time.
+
+
+* **Image Generation:**
+* **Imagen 3 / Nano Banana Pro:** A state-of-the-art diffusion model used by the *Visual Agent* to create hyper-realistic, personalized product photography based on user context.
+
+
+
+---
+
+## 🛠️ Infrastructure & Dev Tools
+
+* **Containerization:**
+* **Docker:** Essential for running local instances of Weaviate and ensuring a consistent environment for your micro-services.
+
+
+* **API Management:**
+* **Google Generative AI SDK:** The primary connector for both Gemma (text) and Imagen (images).
+* **Weaviate TS Client:** The TypeScript library used for searching and seeding the vector database.
+
+
+* **Authentication & State:**
+* **NextAuth.js:** For secure user login (to link social profiles).
+* **React Context / Zustand:** To manage the "Style State" across the frontend.
 
 -----
 
@@ -63,4 +108,4 @@ npm run dev
 
 -----
 
- 
+
