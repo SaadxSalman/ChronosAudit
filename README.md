@@ -20,7 +20,7 @@ An agent that creates a dynamic, personalized shopping experience from end to en
   * **Frontend:** [Next.js](https://nextjs.org/)
   * **Text Generation:** [Gemma](https://huggingface.co/google/gemma-7b)
   * **Image Generation:** Large-scale generative model (e.g., Imagen 4)
-  * **Vector Search:** [Qdrant](https://qdrant.tech/)
+  * **Vector Search:** [Weaviate](https://qdrant.tech/)
 
 -----
 
