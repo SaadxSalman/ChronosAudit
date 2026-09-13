@@ -1,4 +1,4 @@
-.PHONY: help setup setup-api setup-worker build typecheck test test-api test-worker \
+.PHONY: help setup setup-api setup-worker build typecheck test test-api test-worker e2e \
         seed pdfs docker-up docker-down dev-api dev-worker dev-celery dev-redis clean
 
 help: ## Show available targets
@@ -15,11 +15,13 @@ build: ## Compile the TypeScript API
 typecheck: ## TypeScript type-check only
 	cd services/api && npm run typecheck
 
-test: test-worker test-api ## Run all test suites
+test: test-worker test-api e2e ## Run all test suites (unit + full-stack smoke)
 test-worker: ## Run pytest on the Python worker
 	cd services/worker && python -m pytest tests -v
 test-api: ## Run Node built-in test runner on the API
 	cd services/api && npm test
+e2e: ## Full-stack smoke: boots worker + API, uploads a PDF, asserts on answers
+	python scripts/e2e_smoke.py
 
 seed: ## Generate sample PDFs and pump them through the pipeline
 	python scripts/seed_demo.py

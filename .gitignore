@@ -33,16 +33,17 @@ coverage.xml
 .env
 .env.local
 .env.*.local
-.env.example
 *.pem
 *.key
 !sample/*.key
 
 # ---- Runtime data ----
 data/
+data-e2e/
 tmp/
 logs/
 *.log
+*.err
 
 # ---- Generated artifacts ----
 sample/*.pdf
@@ -55,3 +56,6 @@ graph_dumps/
 # ---- OS junk ----
 *.pid
 celerybeat-schedule*
+services/worker/.env.example
+services/worker/.env.example
+services/api/.env.example
