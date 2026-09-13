@@ -1,0 +1,56 @@
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
+
+# ---- Node / TypeScript ----
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+npm-debug.log*
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+.coverage
+htmlcov/
+coverage.xml
+
+# ---- Environment / Secrets ----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+!sample/*.key
+
+# ---- Runtime data ----
+data/
+tmp/
+logs/
+*.log
+
+# ---- Generated artifacts ----
+sample/*.pdf
+sample/out/
+!sample/.gitkeep
+graph_dumps/
+*.gpickle
+*.lancedb/
+
+# ---- OS junk ----
+*.pid
+celerybeat-schedule*

@@ -1,0 +1,1 @@
+"""Extraction pipeline: chunking, prompts, SLM wrapper, deterministic fallback."""

@@ -1,0 +1,1 @@
+"""Storage backends: LanceDB (vectors + chunk metadata) and NetworkX (temporal KG)."""

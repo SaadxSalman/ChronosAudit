@@ -1,0 +1,71 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: chronos-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  worker:
+    build:
+      context: ./services/worker
+    container_name: chronos-worker
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      WORKER_MODE: ${WORKER_MODE:-sync}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      LANCE_DB_PATH: /app/data/lancedb
+      GRAPH_STORE_PATH: /app/data/graph/chronos.gpickle
+      GRAPH_EXPORT_PATH: /app/data/graph/exports
+      DOC_STATE_DIR: /app/data/state
+      UPLOAD_DIR: /app/data/uploads
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-none}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://localhost:11434}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      WORKER_API_TOKEN: ${WORKER_API_TOKEN:-change-me-dev-token}
+      CHUNK_SIZE_TOKENS: ${CHUNK_SIZE_TOKENS:-800}
+      CHUNK_OVERLAP_TOKENS: ${CHUNK_OVERLAP_TOKENS:-120}
+    ports:
+      - "8100:8100"
+    volumes:
+      - worker-data:/app/data
+    command: >
+      sh -c "uvicorn chronos.api:app --host 0.0.0.0 --port 8100 &
+             exec celery -A chronos.celery_app worker -l info --concurrency=2"
+
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    container_name: chronos-api
+    restart: unless-stopped
+    depends_on:
+      - worker
+    environment:
+      PORT: 4000
+      WORKER_BASE_URL: http://worker:8100
+      WORKER_API_TOKEN: ${WORKER_API_TOKEN:-change-me-dev-token}
+      DATA_DIR: /app/data
+      WEB_DIR: /app/web
+    ports:
+      - "4000:4000"
+    volumes:
+      - api-data:/app/data
+
+volumes:
+  redis-data:
+  worker-data:
+  api-data:
