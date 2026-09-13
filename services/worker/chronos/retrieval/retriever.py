@@ -18,6 +18,7 @@ from datetime import date
 from typing import Optional
 
 from chronos.embeddings import EmbeddingProvider
+from chronos.extraction.fallback import canonical_name
 from chronos.models import GraphEdge, RetrievalContext
 from chronos.storage.graph_store import TemporalGraph
 from chronos.storage.lancedb_store import LanceStore
@@ -40,12 +41,17 @@ def token_overlap(a: str, b: str) -> float:
 
 def _question_matches_node(node_name: str, question: str) -> bool:
     """True when most of a node's tokens appear in the question text."""
-    node_tokens = _tokens(node_name)
+    node_tokens = _tokens(canonical_name(node_name))
     q_tokens = _tokens(question)
     if len(node_tokens) < 2:
         return False
     hit = len(node_tokens & q_tokens)
     return hit >= max(2, len(node_tokens) - 1)
+
+
+def _canon(name: str) -> str:
+    """Canonical, case/article-insensitive node identity for traversal."""
+    return canonical_name(name).lower()
 
 
 class TemporalRetriever:
@@ -119,12 +125,15 @@ class TemporalRetriever:
         # --- 3. Graph lens: time-sliced traversal -----------------------------
         graph_edges: list[GraphEdge] = []
         seen: set[tuple[str, str, str]] = set()
-        frontier = set(seed_entities)
+        # Frontier is canonicalised so article variants ('The X' vs 'X') and
+        # casing in entity mentions can never orphan an edge endpoint.
+        frontier = {_canon(s) for s in seed_entities}
         visited: set[str] = set()
         for _ in range(max(1, hops)):
             nxt: set[str] = set()
             for u, v, data in self.graph.graph.edges(data=True):
-                if u not in frontier and v not in frontier:
+                cu, cv = _canon(u), _canon(v)
+                if cu not in frontier and cv not in frontier:
                     continue
                 if iv is not None and not edge_valid_within(data, iv):
                     continue
@@ -133,8 +142,8 @@ class TemporalRetriever:
                     continue
                 seen.add(key)
                 graph_edges.append(self.graph._edge_to_model(data))
-                nxt.add(u)
-                nxt.add(v)
+                nxt.add(cu)
+                nxt.add(cv)
                 if len(graph_edges) >= max_graph_edges:
                     break
             visited |= frontier

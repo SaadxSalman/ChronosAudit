@@ -110,14 +110,54 @@ def find_dates_in_text(text: str) -> list[tuple[date, str]]:
     return found
 
 
+_START_FRAME = re.compile(
+    r"\b(starting|starts|beginning|begins|from|effective|commencing|commences|as of)\b"
+)
+_END_FRAME = re.compile(
+    r"\b(until|through|till|expires?|expiring|ending|ends|repealed|sunset|before)\b"
+)
+
+
 def infer_chunk_window(text: str) -> TemporalValidity:
-    """Heuristic chunk-level validity: min/max dates mentioned on the chunk."""
+    """Chunk-level retrieval window: hull of the chunk's dates, start-frame aware.
+
+    A chunk is a *container* of facts, so its retrieval interval is the hull of
+    every date it mentions (``min(start) → max(end)``). One refinement: when the
+    *latest* date sits in a start frame ("… starting 2024-07-01.") and no end
+    marker follows it, that date OPENS a regime instead of closing the chunk's
+    validity. Without this, a chunk holding both a repealed rule and its
+    successor would be filtered out of every "current" window — excluding
+    exactly the successor facts this system exists to surface.
+    """
     dates = find_dates_in_text(text)
     if not dates:
         return TemporalValidity()
+
+    start, start_label = dates[0]
+    end, end_label = dates[-1][0], dates[-1][1]
+
+    low = text.lower()
+    pos = low.rfind(end_label.lower()) if end_label else -1
+    if pos >= 0:
+        prefix = low[max(0, pos - 40):pos]
+        suffix = low[pos + len(end_label):]
+        # Only the NEAREST preceding marker counts: in "effective X until Y"
+        # the frame for Y is "until" (end), not "effective" (start).
+        nearest: Optional[tuple[int, str]] = None
+        for m in _START_FRAME.finditer(prefix):
+            nearest = (m.start(), m.group(0))
+        for m in _END_FRAME.finditer(prefix):
+            if nearest is None or m.start() > nearest[0]:
+                nearest = (m.start(), m.group(0))
+        nearest_is_start = nearest is not None and _START_FRAME.fullmatch(nearest[1]) is not None
+        if nearest_is_start and not _END_FRAME.search(suffix):
+            # "… starting 2024-07-01." — the regime opens here and continues.
+            end, end_label = None, None
     return TemporalValidity(
-        start=dates[0][0], end=dates[-1][0],
-        start_label=dates[0][1], end_label=dates[-1][1],
+        start=start,
+        start_label=start_label,
+        end=end,
+        end_label=end_label,
     )
 
 
@@ -171,6 +211,19 @@ def _classify_entity(name: str, text: str) -> str:
     return "Concept"
 
 
+_ARTICLE = re.compile(r"^(the|a|an)\s+", re.IGNORECASE)
+
+
+def canonical_name(name: str) -> str:
+    """Strip a leading article so 'The Data Transfer Policy' == 'Data Transfer Policy'.
+
+    Graph nodes and retrieval seeds must agree on ONE canonical surface form,
+    otherwise the same entity appears as two nodes and interval-validated edges
+    become unreachable during traversal.
+    """
+    return _ARTICLE.sub("", name.strip())
+
+
 def extract_fallback(text: str, chunk_id: str = "", doc_name: str = "") -> ExtractionResult:
     """Deterministic extraction used when no SLM is configured."""
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
@@ -207,7 +260,7 @@ def extract_fallback(text: str, chunk_id: str = "", doc_name: str = "") -> Extra
             for cand in entity_names:
                 pos = low.find(cand.lower())
                 if pos != -1 and pos < vpos:
-                    subj = cand
+                    subj = canonical_name(cand)
             # object: words after verb up to a date or sentence end
             tail = sent[vpos + len(verb):]
             tail = re.split(r"\b(as of|until|effective|on|commencing)\b", tail, maxsplit=1, flags=re.I)[0]
@@ -215,7 +268,7 @@ def extract_fallback(text: str, chunk_id: str = "", doc_name: str = "") -> Extra
             words = tail.split()
             if not words:
                 continue
-            obj = " ".join(words[:4]).strip()
+            obj = canonical_name(" ".join(words[:4]).strip())
             if not obj or len(obj) < 2:
                 continue
             if obj.lower() in _STOPWORDS:

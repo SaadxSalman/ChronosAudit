@@ -96,13 +96,14 @@ documentsRouter.get(
 documentsRouter.get(
   "/:id",
   asyncHandler(async (req, res) => {
-    const local = getDocument(req.params.id);
+    const id = String(req.params.id);
+    const local = getDocument(id);
     try {
-      const fresh = await syncFromWorker(req.params.id);
+      const fresh = await syncFromWorker(id);
       res.json(fresh);
     } catch {
       if (local) return void res.json(local);
-      throw new ApiError(404, `No such document: ${req.params.id}`);
+      throw new ApiError(404, `No such document: ${id}`);
     }
   })
 );
@@ -110,13 +111,14 @@ documentsRouter.get(
 documentsRouter.get(
   "/:id/status",
   asyncHandler(async (req, res) => {
-    const rec = getDocument(req.params.id);
+    const id = String(req.params.id);
+    const rec = getDocument(id);
     try {
-      const fresh = await syncFromWorker(req.params.id);
+      const fresh = await syncFromWorker(id);
       res.json(fresh);
     } catch {
       if (rec) return void res.json(rec);
-      throw new ApiError(404, `No such document: ${req.params.id}`);
+      throw new ApiError(404, `No such document: ${id}`);
     }
   })
 );
@@ -124,7 +126,7 @@ documentsRouter.get(
 documentsRouter.post(
   "/:id/reindex",
   asyncHandler(async (req, res) => {
-    const rec = requireDocument(req.params.id);
+    const rec = requireDocument(String(req.params.id));
     const ingest = await workerClient.ingest(rec.id, rec.filename, rec.path, false);
     res.json({ id: rec.id, queued: true, ingest });
   })
@@ -133,14 +135,15 @@ documentsRouter.post(
 documentsRouter.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    const rec = getDocument(req.params.id);
+    const id = String(req.params.id);
+    const rec = getDocument(id);
     try {
-      await workerClient.deleteDocument(req.params.id);
+      await workerClient.deleteDocument(id);
     } catch {
       /* the worker may not know the doc; clean local state anyway */
     }
-    await removeDocument(req.params.id);
-    res.json({ deleted: req.params.id, filename: rec?.filename });
+    await removeDocument(id);
+    res.json({ deleted: id, filename: rec?.filename });
   })
 );
 

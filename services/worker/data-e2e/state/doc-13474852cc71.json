@@ -1,0 +1,16 @@
+{
+  "id": "doc-13474852cc71",
+  "filename": "cross_border_data_policy.pdf",
+  "path": "S:\\My Data\\Github\\ChronosAudit\\services\\api\\data-e2e\\api\\uploads\\55096dc74fb7_cross_border_data_policy.pdf",
+  "pages": 1,
+  "chunk_count": 1,
+  "entity_count": 23,
+  "relation_count": 3,
+  "size_bytes": 2834,
+  "status": "indexed",
+  "progress": 1.0,
+  "stage_detail": "ingestion complete",
+  "error": null,
+  "created_at": "2026-09-13T06:13:41.184548",
+  "updated_at": "2026-09-13T06:13:41.184570"
+}

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ChronosAudit — Temporal Knowledge-Graph RAG Console</title>
+<style>
+  :root {
+    --bg: #0b0f14; --panel: #121820; --panel-2: #0f151c; --line: #1e2a38;
+    --text: #d7e1ec; --muted: #7d8fa3; --accent: #4fc3f7; --accent-2: #9ccc65;
+    --warn: #ffb74d; --bad: #ef5350; --good: #66bb6a; --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: baseline; gap: 16px; padding: 18px 24px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #101720, var(--bg)); }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: 0.4px; }
+  header h1 span { color: var(--accent); }
+  header .sub { color: var(--muted); font-size: 12.5px; }
+  #healthStrip { margin-left: auto; display: flex; gap: 14px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  #healthStrip b { color: var(--text); font-weight: 600; }
+  main { display: grid; grid-template-columns: 340px 1fr; gap: 18px; padding: 18px 24px; max-width: 1400px; margin: 0 auto; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .panel h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent); }
+  .panel + .panel { margin-top: 18px; }
+  label { display: block; margin: 10px 0 4px; font-size: 12px; color: var(--muted); }
+  input[type=text], input[type=number], select {
+    width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  button {
+    background: #16283a; color: var(--accent); border: 1px solid #27455f; border-radius: 6px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; margin-top: 10px;
+  }
+  button:hover { background: #1b3450; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.ghost { background: transparent; border-color: var(--line); color: var(--muted); padding: 3px 8px; margin: 0; font-size: 11.5px; }
+  button.ghost:hover { color: var(--bad); border-color: var(--bad); background: transparent; }
+  .row { display: flex; gap: 10px; } .row > * { flex: 1; }
+  .doc { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0; background: var(--panel-2); }
+  .doc .name { font-weight: 600; font-size: 13px; word-break: break-all; }
+  .doc .meta { color: var(--muted); font-size: 11.5px; font-family: var(--mono); margin-top: 3px; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10.5px; font-family: var(--mono); margin-left: 6px; vertical-align: middle; }
+  .badge.indexed { background: #16321f; color: var(--good); }
+  .badge.failed { background: #3a1517; color: var(--bad); }
+  .badge.uploaded, .badge.queued, .badge.parsing, .badge.chunking, .badge.extracting, .badge.embedding, .badge.indexing { background: #33290f; color: var(--warn); }
+  .bar { height: 4px; background: #1a2432; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow: auto; font-family: var(--mono); font-size: 12px; color: #c9d7e4; white-space: pre-wrap; }
+  .answer { background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--accent-2); border-radius: 8px; padding: 12px 14px; }
+  .fact { font-family: var(--mono); font-size: 12px; padding: 6px 10px; border-left: 2px solid var(--line); margin: 6px 0; color: #b8c7d6; }
+  .fact .validity { color: var(--warn); }
+  .fact.added { border-left-color: var(--good); } .fact.removed { border-left-color: var(--bad); } .fact.changed { border-left-color: var(--warn); }
+  .trace { color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+  .trace li { margin: 2px 0; }
+  .pill { display: inline-block; background: #14212e; border: 1px solid var(--line); border-radius: 12px; padding: 2px 10px; margin: 2px 4px 2px 0; font-size: 11.5px; color: var(--accent); font-family: var(--mono); }
+  .muted { color: var(--muted); } .err { color: var(--bad); font-family: var(--mono); font-size: 12px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tabs button { margin: 0; }
+  .tabs button.on { background: #1b3450; border-color: var(--accent); }
+  .hidden { display: none; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+  .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 20px; color: var(--accent); font-family: var(--mono); }
+  .stat span { color: var(--muted); font-size: 11px; }
+  h3 { font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 6px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Chronos<span>Audit</span></h1>
+  <div class="sub">Temporal Knowledge-Graph RAG — audit console</div>
+  <div id="healthStrip"><span>worker <b id="hWorker">…</b></span><span>chunks <b id="hChunks">–</b></span><span>nodes <b id="hNodes">–</b></span><span>edges <b id="hEdges">–</b></span><span>docs <b id="hDocs">–</b></span></div>
+</header>
+
+<main>
+  <!-- ================= LEFT: documents ================= -->
+  <section>
+    <div class="panel">
+      <h2>Documents</h2>
+      <label>Upload a regulatory PDF</label>
+      <input type="file" id="file" accept="application/pdf" />
+      <div class="row">
+        <label style="display:flex;align-items:center;gap:6px;margin-top:10px">
+          <input type="checkbox" id="wait" checked style="width:auto" /> wait until indexed
+        </label>
+        <button id="uploadBtn" style="margin-top:10px">Ingest ▸</button>
+      </div>
+      <div id="uploadMsg" class="muted" style="font-size:12px;margin-top:6px"></div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:14px 0" />
+      <div id="docList" class="muted">No documents yet.</div>
+    </div>
+  </section>
+
+  <!-- ================= RIGHT: query console ================= -->
+  <section>
+    <div class="panel">
+      <div class="tabs">
+        <button id="tab-ask" class="on">Ask</button>
+        <button id="tab-compare">Compare windows</button>
+        <button id="tab-graph">Graph</button>
+      </div>
+
+      <!-- ============ ASK ============ -->
+      <div id="pane-ask">
+        <label>Question</label>
+        <input type="text" id="q" placeholder="What was the compliance protocol for cross-border data transfers in Q3 2024?" />
+        <div class="row">
+          <div>
+            <label>Time window (natural language)</label>
+            <input type="text" id="w" placeholder="Q3 2024 · 2023 · 2024-07-01..2024-09-30" />
+          </div>
+          <div style="max-width:110px">
+            <label>top_k</label>
+            <input type="number" id="topk" value="6" min="1" max="20" />
+          </div>
+        </div>
+        <button id="askBtn">Ask ▸</button>
+        <div id="askOut"></div>
+      </div>
+
+      <!-- ============ COMPARE ============ -->
+      <div id="pane-compare" class="hidden">
+        <label>Question</label>
+        <input type="text" id="cq" placeholder="How did cross-border obligations change?" />
+        <div class="row">
+          <div><label>Window A (before)</label><input type="text" id="wa" placeholder="Q1 2023" /></div>
+          <div><label>Window B (after)</label><input type="text" id="wb" placeholder="Q4 2024" /></div>
+        </div>
+        <button id="cmpBtn">Compare ▸</button>
+        <div id="cmpOut"></div>
+      </div>
+
+      <!-- ============ GRAPH ============ -->
+      <div id="pane-graph" class="hidden">
+        <div class="stats" id="graphStats"></div>
+        <div class="row" style="margin-top:12px">
+          <div><label>Snapshot window (optional)</label><input type="text" id="gwin" placeholder="2024" /></div>
+          <div style="max-width:130px"><label>max_edges</label><input type="number" id="gmax" value="200" min="1" max="5000" /></div>
+        </div>
+        <button id="snapBtn">Load snapshot ▸</button>
+        <label style="margin-top:14px">Entity neighbours</label>
+        <div class="row">
+          <input type="text" id="gent" placeholder="Data Transfer Policy" />
+          <button id="nbBtn" style="max-width:130px">Fetch ▸</button>
+        </div>
+        <div id="graphOut"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const api = (path, opts) => fetch(path, opts).then(async (r) => {
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.error || (r.status + " " + r.statusText));
+  return body;
+});
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const validity = (e) => (e && (e.start_label || e.start) || "…") + " → " + ((e && (e.end_label || e.end)) || "…");
+
+/* Minimal window-label → [start,end] for graph snapshots (worker-side NL
+   parsing stays authoritative for queries; this is just for the explorer). */
+function windowRange(label) {
+  const s = label.trim();
+  let m;
+  if ((m = s.match(/^Q([1-4])\s*(\d{4})$/i))) {
+    const q = Number(m[1]) - 1, y = Number(m[2]);
+    return [`${y}-${String(q * 3 + 1).padStart(2, "0")}-01`, `${y}-${String(q * 3 + 3).padStart(2, "0")}-31`];
+  }
+  if ((m = s.match(/^(\d{4})$/))) return [`${m[1]}-01-01`, `${m[1]}-12-31`];
+  if ((m = s.match(/^(\d{4})-(\d{2})$/))) {
+    const y = m[1], mo = Number(m[2]);
+    const last = new Date(Number(y), mo, 0).getDate();
+    return [`${y}-${m[2]}-01`, `${y}-${m[2]}-${last}`];
+  }
+  if ((m = s.match(/^(\d{4}-\d{2}-\d{2})\s*(?:\.\.|to|\u2192|[-])\s*(\d{4}-\d{2}-\d{2})$/i))) return [m[1], m[2]];
+  if ((m = s.match(/^(\d{4}-\d{2}-\d{2})$/))) return [m[1], m[1]];
+  return null; // untemporal
+}
+
+/* ---------------- health + docs ---------------- */
+async function refreshHealth() {
+  try {
+    const h = await api("/api/health");
+    const w = h.worker || {};
+    $("hWorker").textContent = h.worker_upstream ? (w.mode || "up") + "·" + (w.embedding_provider || "?") : "down";
+    $("hChunks").textContent = w.lancedb_chunks ?? "–";
+    $("hNodes").textContent = w.graph_nodes ?? "–";
+    $("hEdges").textContent = w.graph_edges ?? "–";
+    $("hDocs").textContent = w.documents ?? "–";
+  } catch { $("hWorker").textContent = "offline"; }
+}
+async function refreshDocs() {
+  try {
+    const docs = await api("/api/documents");
+    const list = Array.isArray(docs) ? docs : docs.documents || [];
+    if (!list.length) { $("docList").innerHTML = '<span class="muted">No documents yet.</span>'; return; }
+    $("docList").innerHTML = list.map((d) => `
+      <div class="doc">
+        <div class="name">${esc(d.filename)} <span class="badge ${esc(d.status)}">${esc(d.status)}</span></div>
+        <div class="meta">${d.pages || 0}p · ${d.chunk_count || 0} chunks · ${d.entity_count || 0} ent · ${d.relation_count || 0} rel · ${Math.round((d.size_bytes || 0) / 1024)} KB</div>
+        <div class="bar"><i style="width:${Math.round((d.progress || 0) * 100)}%"></i></div>
+        ${d.error ? `<div class="err">${esc(d.error)}</div>` : ""}
+        <div style="margin-top:6px;display:flex;gap:6px">
+          <button class="ghost" data-reindex="${esc(d.id)}">reindex</button>
+          <button class="ghost" data-del="${esc(d.id)}">delete</button>
+        </div>
+      </div>`).join("");
+  } catch (e) { $("docList").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+}
+$("docList").addEventListener("click", async (ev) => {
+  const del = ev.target.getAttribute("data-del");
+  const re = ev.target.getAttribute("data-reindex");
+  if (!del && !re) return;
+  try {
+    if (del) await api("/api/documents/" + del, { method: "DELETE" });
+    else await api("/api/documents/" + re + "/reindex", { method: "POST" });
+    refreshDocs(); refreshHealth();
+  } catch (e) { $("uploadMsg").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+});
+$("uploadBtn").addEventListener("click", async () => {
+  const f = $("file").files[0];
+  if (!f) { $("uploadMsg").textContent = "Choose a PDF first."; return; }
+  const fd = new FormData();
+  fd.append("file", f);
+  fd.append("wait", String($("wait").checked));
+  fd.append("timeout_seconds", "180");
+  $("uploadBtn").disabled = true;
+  $("uploadMsg").textContent = "Uploading + ingesting…";
+  try {
+    const rec = await api("/api/documents/upload", { method: "POST", body: fd });
+    $("uploadMsg").innerHTML = `<span style="color:var(--good)">✓ ${esc(rec.id)} — ${esc(rec.status || "queued")}</span>` +
+      (rec.chunk_count != null ? ` (${rec.chunk_count} chunks, ${rec.entity_count ?? 0} entities, ${rec.relation_count ?? 0} relations)` : "");
+    refreshDocs(); refreshHealth();
+  } catch (e) { $("uploadMsg").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  $("uploadBtn").disabled = false;
+});
+/* ---------------- ask ---------------- */
+$("askBtn").addEventListener("click", async () => {
+  const question = $("q").value.trim();
+  if (!question) return;
+  $("askBtn").disabled = true;
+  $("askOut").innerHTML = '<p class="muted">Thinking across time…</p>';
+  try {
+    const body = { question, top_k: Number($("topk").value) || 6 };
+    if ($("w").value.trim()) body.window = $("w").value.trim();
+    const r = await api("/api/query", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const ctx = r.context || {};
+    const factLine = (f) => typeof f === "string"
+      ? `<div class="fact">${esc(f)}</div>`
+      : `<div class="fact">${esc(f.subject ?? "")} ${f.predicate ? "--[" + esc(f.predicate) + "]--&gt; " + esc(f.object ?? "") : ""} <span class="validity">${esc(f.validity ?? "")}</span></div>`;
+    $("askOut").innerHTML = `
+      <h3>Answer <span class="muted">(${esc(r.engine || "")})</span></h3>
+      <div class="answer">${esc(r.answer)}</div>
+      ${r.facts && r.facts.length ? `<h3>Interval-validated facts</h3>${r.facts.slice(0, 14).map(factLine).join("")}` : ""}
+      <h3>Vector evidence</h3>
+      ${(ctx.hits || []).map((h) => `<div class="fact">[${esc(h.doc_name)} p.${h.page}] <span class="validity">${esc(h.start || "…")} → ${esc(h.end || "…")}</span> · score ${h.score ?? ""}<br/>${esc((h.text || "").slice(0, 240))}…</div>`).join("") || '<p class="muted">none</p>'}
+      <h3>Retrieval trace</h3>
+      <ul class="trace">${(ctx.trace || []).map((t) => `<li>${esc(t)}</li>`).join("")}</ul>
+      <h3>Seed entities</h3>
+      <div>${(ctx.seed_entities || []).map((s) => `<span class="pill">${esc(s)}</span>`).join("") || '<span class="muted">none</span>'}</div>`;
+  } catch (e) { $("askOut").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  $("askBtn").disabled = false;
+});
+
+/* ---------------- compare ---------------- */
+$("cmpBtn").addEventListener("click", async () => {
+  const q = $("cq").value.trim(), a = $("wa").value.trim(), b = $("wb").value.trim();
+  if (!q || !a || !b) { $("cmpOut").innerHTML = '<p class="err">question, window_a and window_b are required</p>'; return; }
+  $("cmpBtn").disabled = true;
+  $("cmpOut").innerHTML = '<p class="muted">Diffing regimes…</p>';
+  try {
+    const r = await api("/api/query/compare", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q, window_a: a, window_b: b }),
+    });
+    const c = r.comparison || {};
+    const edge = (e, cls) => `<div class="fact ${cls}">${esc(e.subject)} --[${esc(e.predicate)}]--&gt; ${esc(e.object)} <span class="validity">${esc(validity(e))}</span></div>`;
+    $("cmpOut").innerHTML = `
+      <h3>Verdict <span class="muted">(${esc(r.engine || "")})</span></h3>
+      <pre>${esc(r.narrative)}</pre>
+      <h3>Removed in ${esc(r.window_b_label || b)}</h3>${(c.removed || []).map((e) => edge(e, "removed")).join("") || '<p class="muted">none</p>'}
+      <h3>Added</h3>${(c.added || []).map((e) => edge(e, "added")).join("") || '<p class="muted">none</p>'}
+      <h3>Validity changed</h3>${(c.changed || []).map((ch) => edge(ch.after, "changed")).join("") || '<p class="muted">none</p>'}
+      <h3>Unchanged</h3>${(c.unchanged || []).map((e) => edge(e, "")).join("") || '<p class="muted">none</p>'}`;
+  } catch (e) { $("cmpOut").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  $("cmpBtn").disabled = false;
+});
+
+/* ---------------- graph ---------------- */
+$("snapBtn").addEventListener("click", async () => {
+  const params = new URLSearchParams({ max_edges: $("gmax").value || "200" });
+  const range = windowRange($("gwin").value || "");
+  if (range) { params.set("start", range[0]); params.set("end", range[1]); }
+  else if ($("gwin").value.trim()) { $("graphOut").innerHTML = '<p class="err">Unsupported window label — use Qn YYYY, YYYY, YYYY-MM or ISO dates.</p>'; return; }
+  try {
+    const s = await api("/api/graph/snapshot?" + params.toString());
+    const edges = s.edges || [];
+    $("graphOut").innerHTML = `
+      <p class="muted">${edges.length} edge(s) valid in ${esc($("gwin").value || "all time")}</p>
+      ${edges.map((e) => `<div class="fact">${esc(e.subject)} --[${esc(e.predicate)}]--&gt; ${esc(e.object)} <span class="validity">${esc(validity(e))}</span> <span class="muted">· ${esc(e.doc_id || "")}</span></div>`).join("") || '<p class="muted">empty snapshot</p>'}`;
+  } catch (e) { $("graphOut").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+});
+$("nbBtn").addEventListener("click", async () => {
+  const ent = $("gent").value.trim();
+  if (!ent) return;
+  try {
+    const edges = await api("/api/graph/neighbors?entity=" + encodeURIComponent(ent) + "&hop=2");
+    $("graphOut").innerHTML = `<p class="muted">${edges.length} edge(s) touching ${esc(ent)}</p>` +
+      (edges.map((e) => `<div class="fact">${esc(e.subject)} --[${esc(e.predicate)}]--&gt; ${esc(e.object)} <span class="validity">${esc(validity(e))}</span></div>`).join("") || '<p class="muted">none</p>');
+  } catch (e) { $("graphOut").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+});
+async function refreshGraphStats() {
+  try {
+    const s = await api("/api/graph/stats");
+    $("graphStats").innerHTML = [["nodes", s.node_count], ["edges", s.edge_count], ["entities", s.entity_count], ["relations", s.relation_count]]
+      .map(([k, v]) => `<div class="stat"><b>${v ?? 0}</b><span>${k}</span></div>`).join("");
+  } catch { /* worker offline */ }
+}
+
+/* ---------------- tabs ---------------- */
+for (const t of ["ask", "compare", "graph"]) {
+  $("tab-" + t).addEventListener("click", () => {
+    for (const x of ["ask", "compare", "graph"]) {
+      $("pane-" + x).classList.toggle("hidden", x !== t);
+      $("tab-" + x).classList.toggle("on", x === t);
+    }
+    if (t === "graph") refreshGraphStats();
+  });
+}
+
+refreshHealth(); refreshDocs();
+setInterval(refreshHealth, 10000);
+
+</script>
+
+
+</body>
+</html>

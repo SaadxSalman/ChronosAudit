@@ -47,7 +47,7 @@ export async function syncFromWorker(id: string): Promise<DocumentRecord> {
   const { workerClient } = await import("./workerClient.js");
   const fresh = await workerClient.documentStatus(id);
   const existing = getDocument(id);
-  const merged: DocumentRecord = { ...existing, ...(fresh as DocumentRecord), id };
+  const merged: DocumentRecord = { ...existing, ...(fresh as unknown as DocumentRecord), id };
   const idx = records.findIndex((r) => r.id === id);
   if (idx >= 0) records[idx] = merged;
   else records.push(merged);

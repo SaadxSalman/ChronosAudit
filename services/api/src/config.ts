@@ -4,10 +4,14 @@
  */
 import path from "node:path";
 import dotenv from "dotenv";
-import { fileURLToPath } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
+/**
+ * Directory the API runs from (services/api when started via npm scripts).
+ * Compiled to CommonJS, so we resolve everything from process.cwd() instead of import.meta.
+ */
+const API_DIR = process.cwd();
+
+dotenv.config({ path: path.resolve(API_DIR, ".env") });
 
 export interface Config {
   port: number;
@@ -29,7 +33,7 @@ function envInt(name: string, fallback: number): number {
 }
 
 function absPrefix(...parts: string[]): string {
-  return path.resolve(path.join(__dirname, "..", ...parts));
+  return path.resolve(path.join(API_DIR, ...parts));
 }
 
 export const config: Config = {
