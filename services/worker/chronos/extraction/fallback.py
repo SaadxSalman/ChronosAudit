@@ -30,8 +30,10 @@ _VERBS = {
     "requires", "prohibits", "governs", "amends", "replaces", "supersedes", "imposes",
     "applies", "mandates", "allows", "permits", "defines", "establishes", "sets",
     "prescribes", "obliges", "limits", "restricts", "bars", "forbids", "authorizes",
-    "effective", "take", "took", "becomes", "became", "ends", "expires", "commences",
 }
+# Time-marker verbs create only weak frames ("X effective <date>"); they are used
+# only when a sentence has no substantive relation verb.
+_TIMING_VERBS = {"effective", "take", "took", "becomes", "became", "ends", "expires", "commences"}
 
 _MONTHS = {
     "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
@@ -63,16 +65,27 @@ def _parse_date_literal(token: str) -> Optional[date]:
 
 
 def find_dates_in_text(text: str) -> list[tuple[date, str]]:
-    """All explicit dates present in the text: (date, raw_label)."""
+    """All explicit dates present in the text: (date, raw_label).
+
+    Bare years that are *inside* an ISO/US date token are skipped so that
+    "starting 2024-07-01" yields one date, not {2024-01-01, 2024-07-01}.
+    """
     found: list[tuple[date, str]] = []
+    occupied: set[tuple[int, int]] = set()
+
     for m in _ISO_DATE.finditer(text):
         d = _parse_date_literal(m.group(0))
         if d:
             found.append((d, m.group(0)))
+            occupied.add(m.span())
     for m in _SLASH_DATE.finditer(text):
         d = _parse_date_literal(m.group(0))
         if d:
             found.append((d, m.group(0)))
+            occupied.add(m.span())
+
+    def inside_occupied(span: tuple[int, int]) -> bool:
+        return any(s <= span[0] and span[1] <= e for s, e in occupied)
 
     low = text.lower()
     # Month + year / quarter + year
@@ -86,8 +99,10 @@ def find_dates_in_text(text: str) -> list[tuple[date, str]]:
             _, last = monthrange(int(m.group(1)), m1)
             found.append((date(int(m.group(1)), m0, 1), m.group(0)))
             found.append((date(int(m.group(1)), m1, last), m.group(0)))
-    # Bare years
+    # Bare years (skip spans already captured by an ISO/SLASH date)
     for m in _YEAR.finditer(text):
+        if inside_occupied(m.span()):
+            continue
         d = date(int(m.group(0)), 1, 1)
         if all(d != fd for fd, _ in found):
             found.append((d, m.group(0)))
@@ -107,17 +122,33 @@ def infer_chunk_window(text: str) -> TemporalValidity:
 
 
 def _candidate_entities(sentences: list[str]) -> list[str]:
-    """Frequent Capitalized noun phrases of length 2-4, deduped, stopword-filtered."""
+    """Frequent Capitalized noun phrases of length 2-4, deduped, stopword-filtered.
+
+    Strips leading articles ("The Cross-Border Data Regulation" → also records
+    "Cross-Border Data Regulation") so the real subject survives the greedy
+    regex match.
+    """
     freqs: dict[str, int] = {}
+    leads = {"the", "a", "an"}
+
+    def record(phrase: str) -> None:
+        phrase = phrase.strip()
+        words = phrase.split()
+        if not (1 <= len(words) <= 4):
+            return
+        if words[0].lower() in _STOPWORDS:
+            # strip trailing stopwords from the head of the phrase
+            while words and words[0].lower() in leads:
+                words = words[1:]
+            if not words:
+                return
+        freqs[phrase] = freqs.get(phrase, 0) + 1
+        if len(words) >= 2:
+            freqs[" ".join(words)] = freqs.get(" ".join(words), 0) + 1
+
     for sent in sentences:
         for m in re.finditer(r"\b([A-Z][A-Za-z0-9&.-]*(?:\s+[A-Z][A-Za-z0-9&.-]*){0,3})\b", sent):
-            phrase = m.group(1).strip()
-            words = phrase.split()
-            if not 1 <= len(words) <= 4:
-                continue
-            if words[0].lower() in _STOPWORDS:
-                continue
-            freqs[phrase] = freqs.get(phrase, 0) + 1
+            record(m.group(1).strip())
     # Prefer terms that look regulatory; keep top 24 by freq, then deterministic sort
     candidates = sorted(freqs.items(), key=lambda kv: (-kv[1], kv[0]))
     return [phrase for phrase, _ in candidates[:24]]
@@ -165,9 +196,10 @@ def extract_fallback(text: str, chunk_id: str = "", doc_name: str = "") -> Extra
     # ---- Relations via VERB + (on/as of/effective/until date) frames -------
     relations: list[RelationOccurrence] = []
     used: set[str] = set()
+    verb_order = sorted(_VERBS, key=len, reverse=True) + sorted(_TIMING_VERBS, key=len, reverse=True)
     for sent in sentences:
         low = sent.lower()
-        for verb in sorted(_VERBS, key=len, reverse=True):
+        for verb in verb_order:
             if f" {verb} " not in f" {low} ":
                 continue
             vpos = low.find(verb)

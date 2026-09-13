@@ -1,0 +1,12 @@
+# ---- Express API docker context ignores ----
+services/api/node_modules
+services/api/dist
+services/api/.env
+node_modules
+web
+docs
+sample
+scripts
+.venv
+.git
+data

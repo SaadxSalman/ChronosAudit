@@ -117,26 +117,20 @@ def diff_snapshots(
 
     Returns dict with keys ``added``, ``removed``, ``changed``, ``unchanged``.
     An edge identity is ``(subject, predicate, object)``; two identities present
-    in BOTH snapshots are *changed* when their validity or evidence differ.
+    in BOTH snapshots are *changed* when their *stored* validity or evidence
+    differ (an open-ended fact that is still in force is therefore unchanged).
     """
     sig = lambda e: (str(e.get("subject", ""))[:80], str(e.get("predicate", ""))[:80], str(e.get("object", ""))[:80])
 
-    def normalize(edges_: Iterable[dict], window: Interval) -> dict[tuple, dict]:
+    def active(edges_: Iterable[dict], window: Interval) -> dict[tuple, dict]:
         out: dict[tuple, dict] = {}
         for e in edges_:
             if not edge_valid_within(e, window):
                 continue
-            # Snap the edge to the query window so identical facts don't look
-            # different just because their stored intervals were wider.
-            local = dict(e)
-            iv = interval_from_edge(e)
-            inter = iv.intersection(window)
-            local["valid_from"] = inter.start
-            local["valid_until"] = inter.end
-            out.setdefault(sig(e), local)
+            out.setdefault(sig(e), e)
         return out
 
-    na, nb = normalize(edges_a, window_a), normalize(edges_b, window_b)
+    na, nb = active(edges_a, window_a), active(edges_b, window_b)
     keys_a, keys_b = set(na), set(nb)
 
     added = [nb[k] for k in sorted(keys_b - keys_a)]

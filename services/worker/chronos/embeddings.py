@@ -69,6 +69,11 @@ class EmbeddingProvider:
     def _init(self) -> None:
         cfg = self.settings
         kind = cfg.embedding_provider
+        if kind == "hashing":
+            self._backing = HashingEmbedder(dim=cfg.embedding_dim or 512)
+            self._dim = cfg.embedding_dim or 512
+            self._kind = "hashing"
+            return
         try:
             if kind == "openai":
                 if not cfg.openai_api_key:
@@ -92,7 +97,7 @@ class EmbeddingProvider:
                 self._dim = cfg.embedding_dim or 768
                 self._kind = "ollama"
             else:
-                raise RuntimeError("hashing is the safe default")
+                raise RuntimeError(f"unknown embedding provider: {kind}")
         except Exception as exc:  # noqa: BLE001
             log.warning("Embedding provider %r unavailable (%s); using hashing.", kind, exc)
             self._backing = HashingEmbedder(dim=cfg.embedding_dim or 512)

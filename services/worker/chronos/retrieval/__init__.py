@@ -1,0 +1,1 @@
+"""Retrieval layer: date-windowed vector search + time-sliced graph traversal."""

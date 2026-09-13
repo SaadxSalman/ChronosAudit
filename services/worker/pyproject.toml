@@ -26,7 +26,6 @@ include = ["chronos*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
-filterwarnings = ["ignore::.*pydantic.*"]
 
 [tool.ruff]
 line-length = 100

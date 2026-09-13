@@ -80,6 +80,27 @@ def _split_paragraphs(page_text: str) -> list[tuple[str, bool]]:
     return parts
 
 
+_SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
+
+
+def _hard_split(paragraph: str, chunk_size_tokens: int) -> list[str]:
+    """Sentence-level split, used when a single paragraph exceeds the budget."""
+    sentences = _SENT_SPLIT.split(paragraph)
+    pieces: list[str] = []
+    current: list[str] = []
+    current_tokens = 0
+    for sent in sentences:
+        st = estimate_tokens(sent)
+        if current and current_tokens + st > chunk_size_tokens:
+            pieces.append(" ".join(current))
+            current, current_tokens = [], 0
+        current.append(sent)
+        current_tokens += st
+    if current:
+        pieces.append(" ".join(current))
+    return pieces or [paragraph]
+
+
 def chunk_document(
     pages: list[Page],
     doc_id: str,
@@ -134,15 +155,21 @@ def chunk_document(
 
     for para, page_no, new_page in paragraphs:
         pt = estimate_tokens(para)
-        if buffer_tokens + pt > chunk_size_tokens and buffer:
-            flush(continued=not new_page)
-        if not buffer:
-            start_idx = idx
-        buffer.append(para)
-        buffer_tokens += pt
-        buffer_pages.append(page_no)
-        buffer_char_len += len(para) + 1
-        idx += len(para) + 1
+        pieces: list[str] = [para]
+        # A single paragraph larger than the whole budget gets carved up by sentence.
+        if not buffer and pt > chunk_size_tokens:
+            pieces = _hard_split(para, chunk_size_tokens)
+        for piece in pieces:
+            pt = estimate_tokens(piece)
+            if buffer_tokens + pt > chunk_size_tokens and buffer:
+                flush(continued=not new_page)
+            if not buffer:
+                start_idx = idx
+            buffer.append(piece)
+            buffer_tokens += pt
+            buffer_pages.append(page_no)
+            buffer_char_len += len(piece) + 1
+            idx += len(piece) + 1
 
     if buffer:
         flush(continued=False)

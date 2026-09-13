@@ -89,6 +89,16 @@ def parse_window(text: Optional[str], as_of: Optional[date] = None) -> ParsedWin
             return ParsedWindow(date(y, mo, d), date(y, mo, d), t)
         return ParsedWindow(date(y, mo, d), date(y, mo, d) + timedelta(days=1), t)
 
+    # --- "as of <Month> <d>, <year>" point-in-time --------------------------
+    m = re.search(
+        r"\b(as of|at|on)\s+(jan\w*|feb\w*|mar\w*|apr\w*|may|jun\w*|jul\w*|aug\w*|sep\w*|oct\w*|nov\w*|dec\w*)\s+(\d{1,2}),?\s*(\d{4})\b",
+        low,
+    )
+    if m:
+        mo, d, y = _MONTHS[m.group(2)], int(m.group(3)), int(m.group(4))
+        d0 = date(y, mo, d)
+        return ParsedWindow(d0, d0, t)
+
     # --- "Q3 2024" / "Q1-Q2 2024" ------------------------------------------
     m = re.search(r"\bq([1-4])\s*(?:-|to|through)?\s*(?:q)?([1-4])?\s*,?\s*(\d{4})\b", low)
     if m:
@@ -165,16 +175,6 @@ def parse_window(text: Optional[str], as_of: Optional[date] = None) -> ParsedWin
         return ParsedWindow(as_of - timedelta(days=30), as_of, t)
     if low.startswith("last tax year"):
         return ParsedWindow(date(as_of.year - 1, 1, 1), date(as_of.year - 1, 12, 31), "last tax year")
-
-    # --- "as of <date>" point-in-time ---------------------------------------
-    m = re.search(
-        r"\b(as of|at|on)\s+(jan\w*|feb\w*|mar\w*|apr\w*|may|jun\w*|jul\w*|aug\w*|sep\w*|oct\w*|nov\w*|dec\w*)\s+(\d{1,2}),?\s*(\d{4})\b",
-        low,
-    )
-    if m:
-        mo, d, y = _MONTHS[m.group(2)], int(m.group(3)), int(m.group(4))
-        d0 = date(y, mo, d)
-        return ParsedWindow(d0, d0, t)
 
     if "current" in low or "today" in low:
         return ParsedWindow(as_of, as_of, "current")
